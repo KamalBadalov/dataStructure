@@ -35,24 +35,5 @@ public class Main {
     }
 
 
-//    public static int[] quickSort(int[] array, int pivot) {
-//        int wail = 0;
-//        pivot = array.length - 1;
-//        boolean isSorted = false;
-//        while (!isSorted){
-//            isSorted = true;
-//        for (int current = 0; current < array.length; current++) {
-//            if (array[pivot] > array[current]) {
-//                var temp = array[current];
-//                array[current] = array[wail];
-//                array[wail] = temp;
-//                wail++;
-//            } else if (){
-//                isSorted = false;
-//                pivot--;
-//            }
-//        }
-//        }
-//        return array;
-//    }
+
 }
