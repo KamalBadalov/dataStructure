@@ -1,11 +1,12 @@
 package utils;
 
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class MyCustomArrayList<E> implements List<E> {
 
     private int size;
-    private static final int DEFAULT_CAPACITY = 10;
+    private static final int DEFAULT_CAPACITY = 5;
     private Object[] objects;
 
     public MyCustomArrayList() {
@@ -59,23 +60,6 @@ public class MyCustomArrayList<E> implements List<E> {
     }
 
     /**
-     * @param a   the array into which the elements of this list are to
-     *            be stored, if it is big enough; otherwise, a new array of the
-     *            same runtime type is allocated for this purpose.
-     * @param <T>
-     * @return
-     */
-    @Override
-    public <T> T[] toArray(T[] a) {
-        if (a.length < size)
-            return (T[]) Arrays.copyOf(objects, size, a.getClass());
-        System.arraycopy(objects, 0, a, 0, size);
-        if (a.length > size)
-            a[size] = null;
-        return a;
-    }
-
-    /**
      * Метод добавления элемента в конец массива
      *
      * @param e element whose presence in this collection is to be ensured
@@ -97,7 +81,6 @@ public class MyCustomArrayList<E> implements List<E> {
      * @param o element to be removed from this list, if present
      * @return isRemove
      */
-    //TODO Делаешь два прохода!
     @Override
     public boolean remove(Object o) {
         int indexRemoved = indexOf(o);
@@ -114,12 +97,10 @@ public class MyCustomArrayList<E> implements List<E> {
      * @param c collection to be checked for containment in this list
      * @return isContains
      */
-    //TODO не проходишь по коллекции*
     @Override
     public boolean containsAll(Collection<?> c) {
-        if (c.isEmpty()) {
-            throw new NullPointerException();
-        }
+        checkIsEmptyCollection(c);
+
         for (Object o : c) {
             if (!contains(o)) {
                 return false;
@@ -135,13 +116,13 @@ public class MyCustomArrayList<E> implements List<E> {
      * @return true
      * @throws NullPointerException
      */
-    //TODO: не правильно проверяешь количество свободных ячеек массива
     @Override
     public boolean addAll(Collection<? extends E> c) {
-        if (c.isEmpty()) {
-            throw new NullPointerException();
+        checkIsEmptyCollection(c);
+
+        if (getCountFreeCells() < c.size()) {
+            fillingArrayIncreasedCapacity(c.size());
         }
-        fillingArrayIncreasedCapacity(c.size());
         for (E e : c) {
             dangerousAdd(e);
         }
@@ -150,6 +131,7 @@ public class MyCustomArrayList<E> implements List<E> {
 
     /**
      * Метод добавления без проверок
+     *
      * @param e
      */
     private void dangerousAdd(E e) {
@@ -160,25 +142,23 @@ public class MyCustomArrayList<E> implements List<E> {
     /**
      * Метод увеличвает длинну массива
      * Используется при добавлении коллекции в массив
+     *
      * @param sizeCollection
      * @return
      */
     private Object[] increaseCapacity(int sizeCollection) {
-        if (getCountFreeCells() < sizeCollection) {
-            int newCapacity = objects.length + (sizeCollection - getCountFreeCells());
-            return new Object[newCapacity];
-        }
-        return objects;
-
+        int newCapacity = objects.length + (sizeCollection - getCountFreeCells());
+        return new Object[newCapacity];
     }
 
     /**
      * Метод заполнения массива
+     *
      * @param sizeCollection
      */
     private void fillingArrayIncreasedCapacity(int sizeCollection) {
         Object[] objectsCopy = increaseCapacity(sizeCollection);
-        if (!Arrays.equals(objectsCopy, objects)){
+        if (!Arrays.equals(objectsCopy, objects)) {
             for (int i = 0; i < size; i++) {
                 objectsCopy[i] = objects[i];
             }
@@ -196,19 +176,15 @@ public class MyCustomArrayList<E> implements List<E> {
      * @throws IndexOutOfBoundsException
      * @throws NullPointerException
      */
-    //TODO: оптимизация, при добавлении в середину или
-    // начало увеличивать массив на нужное количество и переносить элементы.
     @Override
     public boolean addAll(int index, Collection<? extends E> c) {
-        if (index < 0 || index >= size) {
-            throw new IndexOutOfBoundsException("Index: " + index + ", Size "
-                    + size);
+        checkIndex(index);
+        checkIsEmptyCollection(c);
+
+        if (getCountFreeCells() < c.size()) {
+            fillingArrayIncreasedCapacity(index, c.size());
         }
-        if (c.isEmpty()) {
-            throw new NullPointerException();
-        }
-        //TODO: тоже соме
-        fillingArrayIncreasedCapacity(index, c.size());
+
         Object[] cCopy = c.toArray();
         for (int i = index, j = 0; j < c.size(); i++, j++) {
             objects[i] = cCopy[j];
@@ -219,11 +195,12 @@ public class MyCustomArrayList<E> implements List<E> {
 
     /**
      * Метод заполнения массива по индексу
+     *
      * @param index
      * @param sizeCollection
      */
     private void fillingArrayIncreasedCapacity
-            (int index, int sizeCollection) {
+    (int index, int sizeCollection) {
         Object[] objectsCopy = increaseCapacity(sizeCollection);
         for (int i = 0; i < objectsCopy.length; i++) {
             if (i <= index) {
@@ -239,6 +216,7 @@ public class MyCustomArrayList<E> implements List<E> {
 
     /**
      * Метод получения свободных ячеек массива
+     *
      * @return objects.length - size
      */
     private int getCountFreeCells() {
@@ -254,10 +232,8 @@ public class MyCustomArrayList<E> implements List<E> {
      */
     @Override
     public boolean removeAll(Collection<?> c) {
-        if (c.isEmpty()) {
+        checkIsEmptyCollection(c);
 
-            throw new NullPointerException();
-        }
         for (Object o : c) {
             remove(o);
         }
@@ -274,9 +250,8 @@ public class MyCustomArrayList<E> implements List<E> {
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        if (c.isEmpty()) {
-            throw new NullPointerException();
-        }
+        checkIsEmptyCollection(c);
+
         boolean isRemoveNonMatches = false;
         for (Object o : objects) {
             if (!c.contains(o)) {
@@ -310,11 +285,31 @@ public class MyCustomArrayList<E> implements List<E> {
      */
     @Override
     public E get(int index) {
-        if (index < 0 || index >= size) {
-            throw new IndexOutOfBoundsException("Index: " + index + ", Size "
-                    + size);
-        }
+        checkIndex(index);
         return (E) objects[index];
+    }
+
+    /**
+     * @param a   the array into which the elements of this list are to
+     *            be stored, if it is big enough; otherwise, a new array of the
+     *            same runtime type is allocated for this purpose.
+     * @param <T>
+     * @return
+     */
+    @Override
+    public <T> T[] toArray(T[] a) {
+        if (a.length < size){
+            for (int i = 0; i < size; i++) {
+                a[i] = (T) objects[i];
+            }
+
+        }
+        if (a.length < size)
+            return (T[]) Arrays.copyOf(objects, size, a.getClass());
+        System.arraycopy(objects, 0, a, 0, size);
+        if (a.length > size)
+            a[size] = null;
+        return a;
     }
 
     /**
@@ -326,10 +321,8 @@ public class MyCustomArrayList<E> implements List<E> {
      */
     @Override
     public void add(int index, E element) {
-        if (index < 0 || index >= size) {
-            throw new IndexOutOfBoundsException("Index: " + index + ", Size "
-                    + size);
-        }
+        checkIndex(index);
+
         if (size == objects.length) {
             fillingArrayIncreasedCapacity();
         }
@@ -352,10 +345,8 @@ public class MyCustomArrayList<E> implements List<E> {
      */
     @Override
     public E set(int index, Object element) {
-        if (index < 0 || index >= size) {
-            throw new IndexOutOfBoundsException("Index: " + index + ", Size "
-                    + size);
-        }
+        checkIndex(index);
+
         var oldValue = objects[index];
         objects[index] = element;
         return (E) oldValue;
@@ -370,16 +361,11 @@ public class MyCustomArrayList<E> implements List<E> {
      */
     @Override
     public E remove(int index) {
-        if (index < 0 || index >= size) {
-            throw new IndexOutOfBoundsException("Index: " + index + ", Size "
-                    + size);
-        }
+        checkIndex(index);
+
         Object removedObject = objects[index];
-        objects[index] = null;
         for (int i = index; i < size - 1; i++) {
-            Object temp = objects[i + 1];
-            objects[i + 1] = objects[i];
-            objects[i] = temp;
+            objects[i] = objects[i + 1];
         }
         size--;
         return (E) removedObject;
@@ -461,6 +447,20 @@ public class MyCustomArrayList<E> implements List<E> {
         return new Object[newCapacity];
     }
 
+    private void checkIndex(int index) {
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size "
+                    + size);
+        }
+    }
+
+    private void checkIsEmptyCollection(Collection<?> c) {
+        if (c.isEmpty()) {
+            throw new NullPointerException();
+        }
+    }
+
+
     /**
      * Метод заполнения массива
      */
@@ -511,6 +511,7 @@ public class MyCustomArrayList<E> implements List<E> {
         public void remove() {
             MyCustomArrayList.this.remove(current - 1);
         }
+
     }
 
     private class ListItr<E> extends Itr<E> implements ListIterator<E> {
